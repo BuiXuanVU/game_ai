@@ -11,7 +11,7 @@ public class CardDatabase : ScriptableObject
         return allCards.Find(c => c.type == type);
     }
 
-    public List<CardData> getRandom(int count)
+    public List<CardData> GetRandom(int count)
     {
         List<CardData> currentHand = new List<CardData>();
         for (int i = 0; i < count; i++)

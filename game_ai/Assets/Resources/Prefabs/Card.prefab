@@ -418,6 +418,7 @@ MonoBehaviour:
   nameCard: {fileID: 8585658540669015049}
   cost: {fileID: 297151618726565369}
   value: {fileID: 3702987362073264068}
+  btn: {fileID: 8579610886596202633}
 --- !u!1 &8124366689360564077
 GameObject:
   m_ObjectHideFlags: 0

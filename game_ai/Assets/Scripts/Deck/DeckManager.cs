@@ -1,37 +1,65 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class DeckManager : MonoBehaviour
 {
     public CardDatabase database;
     public GameObject prefab;
 
-    private List<CardData> currentHand = new List<CardData>();
+    private List<CardController> cardSlots = new List<CardController>();
+    public HorizontalLayoutGroup content;
+    public int handSize = 5;
 
-    public int maxStamina = 10;
-    public int currentStamina;
-
-    private void Start()
+    private void Reset()
     {
-        StartTurn();
+        handSize = 5;
+        content = transform.GetComponentInChildren<HorizontalLayoutGroup>();
     }
     public void StartTurn()
     {
-        currentStamina = maxStamina;
-
-        currentHand.Clear();
-        currentHand = database.getRandom(5);
-
-        DisplayHand();
+        List<CardData> newHand = database.GetRandom(handSize);
+        SetupHand(newHand);
     }
 
-    void DisplayHand()
+    public List<CardController> GetHandData()
     {
-        foreach (CardData card in currentHand)
+        return cardSlots.Where(c => c.gameObject.activeSelf).ToList();
+    }
+
+    void SetupHand(List<CardData> cards)
+    {
+        for (int i = 0; i < handSize; i++)
         {
-            GameObject data = Instantiate(prefab, transform);
-            data.GetComponent<CardController>().updateCard(card);
+            CardController card;
+
+            if (i >= cardSlots.Count)
+            {
+                GameObject obj = Instantiate(prefab, content.transform);
+                card = obj.GetComponent<CardController>();
+                cardSlots.Add(card);
+            }
+            else
+            {
+                card = cardSlots[i];
+            }
+
+            card.gameObject.SetActive(true);
+            card.UpdateCard(cards[i]);
         }
-        
+
+        for (int i = handSize; i < cardSlots.Count; i++)
+        {
+            cardSlots[i].Hide();
+        }
+    }
+
+    public void ClearHand()
+    {
+        foreach (var card in cardSlots)
+        {
+            card.Hide();
+        }
     }
 }
