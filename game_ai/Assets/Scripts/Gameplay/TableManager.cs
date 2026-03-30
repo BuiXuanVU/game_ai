@@ -23,13 +23,11 @@ public class TableManager : MonoBehaviour
     }
     public void SetCard(int index, CardData data)
     {
-        // Đảm bảo không vượt quá số lượng 5 lá có sẵn
         if (index >= communityCards.Count) return;
 
         communityCards[index].SetData(data);
-        communityCards[index].ShowCard(true); // Hiển thị mặt sau/vị trí bài
+        communityCards[index].ShowCard(true);
 
-        // Cực kỳ quan trọng: Cập nhật index để TableDrawMore biết đã chia đến đâu
         CurrentCard = index;
     }
 

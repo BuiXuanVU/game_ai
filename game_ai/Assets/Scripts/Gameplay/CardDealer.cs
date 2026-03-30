@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class CardDealer : MonoBehaviour
@@ -31,8 +30,8 @@ public class CardDealer : MonoBehaviour
 
     public IEnumerator StartNewGame()
     {
-        //StartCoroutine(PlayerDraw());
-        //yield return new WaitForSeconds(0.5f);
+        StartCoroutine(PlayerDraw());
+        yield return new WaitForSeconds(0.5f);
 
         StartCoroutine(TableDraw());
 

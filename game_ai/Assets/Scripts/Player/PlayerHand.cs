@@ -1,15 +1,29 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Overlays;
+using TMPro;
 using UnityEngine;
 
 public class PlayerHand : MonoBehaviour
 {
     public List<CardModel> handCards;
+    public ChipController chipController;
+    public TextMeshProUGUI textMeshProUGUI;
 
     private void Reset()
     {
         handCards.AddRange(GetComponentsInChildren<CardModel>());
+        chipController = GetComponentInChildren<ChipController>();
+        textMeshProUGUI = GetComponentInChildren<TextMeshProUGUI>();
+    }
+
+    private void Start()
+    {
+        setPrice();
+    }
+
+    public void setPrice()
+    {
+        textMeshProUGUI.text = chipController.wallet.ToString();
     }
     public IEnumerator ReceiveCard(CardData data, int index)
     {

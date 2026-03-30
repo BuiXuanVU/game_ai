@@ -3,16 +3,17 @@ using UnityEngine;
 using System;
 public class DeckManager : MonoBehaviour
 {
-    [SerializeField] private CardDataManager dataManager;
+    private CardDataManager dataManager;
     private List<CardData> deck = new List<CardData>();
     private int currentIndex = 0;
 
-    private void Reset()
+    private void Start()
     {
-        dataManager = GetComponent<CardDataManager>();
+        dataManager = CardDataManager.Instance;
     }
     public void PrepareDeck()
     {
+        
         deck.Clear();
         Sprite randomBack = dataManager.backs[UnityEngine.Random.Range(0, dataManager.backs.Count)];
 
