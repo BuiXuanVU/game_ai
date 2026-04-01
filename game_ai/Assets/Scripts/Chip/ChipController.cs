@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,38 +6,43 @@ using UnityEngine.UI;
 public class ChipController : MonoBehaviour
 {
     private CardDataManager cardDataManager;
-    [SerializeField] private List<Image> spawnedChips = new List<Image>();
+
+    private List<Image> chipPool = new List<Image>();
 
     private int[] chipValues = { 5000, 1000, 500, 100, 25, 10, 5, 1 };
-    public Image chipPrefab;
-    public int wallet = 1000;
 
     void Start()
     {
         cardDataManager = CardDataManager.Instance;
-        RenderChips(wallet);
     }
 
+    // =========================
+    // 🎯 MAIN
+    // =========================
     public void RenderChips(int amount)
     {
         ClearChips();
+        RectTransform rectTransform = GetComponent<RectTransform>();
+        float startX = 0f;
+        float startY = 0f;
 
-        RectTransform rect = GetComponent<RectTransform>();
-        float startX = rect.anchoredPosition.x;
-        float startY = rect.anchoredPosition.y;
+        float spacingX = 40f;
+        float spacingY = 30f;
+        float stackOffsetY = 5f;
 
-        var chipGroups = BreakDownAmount();
+        int maxColumns = 3;
+
+        var chipGroups = BreakDownAmount(amount);
         var groups = GetSplitGroups(chipGroups.Count);
 
         int index = 0;
-        float spacingX = 40f;
-        int maxColumns = 3;
+
+        //rectTransform.sizeDelta = new Vector2(spacingX * groups.First(), spacingY * groups.Count);
 
         foreach (int group in groups)
         {
             float offsetX = (maxColumns - group) * (spacingX / 2f);
             float currentX = startX + offsetX;
-
             for (int i = 0; i < group; i++)
             {
                 if (index >= chipGroups.Count)
@@ -53,22 +57,81 @@ public class ChipController : MonoBehaviour
                 for (int j = 0; j < totalCount; j++)
                 {
                     CreateChip(currentX, currentY, chipValue);
-                    currentY += 5f;
+                    currentY += stackOffsetY;
                 }
 
-                currentX += 40f;
+                currentX += spacingX;
                 index++;
             }
 
-            startY -= 30f;
+            startY -= spacingY;
         }
     }
 
+    // =========================
+    // 🧱 CREATE CHIP (POOL)
+    // =========================
     private void CreateChip(float x, float y, int chipValue)
     {
-        Image chip = Instantiate(chipPrefab, transform);
+        Debug.Log(x + " " + y);
+        Image chip = GetChipFromPool();
         chip.rectTransform.anchoredPosition = new Vector2(x, y);
+        chip.rectTransform.localScale = Vector3.one;
+        chip.rectTransform.localRotation = Quaternion.identity;
         chip.sprite = cardDataManager.GetChip(chipValue);
+    }
+
+    // =========================
+    // ♻️ POOL LOGIC
+    // =========================
+    private Image GetChipFromPool()
+    {
+        foreach (var chip in chipPool)
+        {
+            if (!chip.gameObject.activeInHierarchy)
+            {
+                chip.gameObject.SetActive(true);
+                return chip;
+            }
+        }
+
+        Image newChip = Instantiate(cardDataManager.chipPrefab, transform);
+        chipPool.Add(newChip);
+        return newChip;
+    }
+
+    private void ClearChips()
+    {
+        foreach (var chip in chipPool)
+        {
+            chip.gameObject.SetActive(false);
+        }
+    }
+
+    // =========================
+    // 🧠 LOGIC CHIP
+    // =========================
+    public List<KeyValuePair<int, int>> BreakDownAmount(int wallet)
+    {
+        Dictionary<int, int> layout = new Dictionary<int, int>();
+        int remaining = wallet;
+
+        var sortedValues = chipValues.OrderByDescending(v => v);
+
+        foreach (int chip in sortedValues)
+        {
+            if (remaining >= chip)
+            {
+                int count = remaining / chip;
+                layout.Add(chip, count);
+                remaining %= chip;
+            }
+        }
+
+        return layout
+            .OrderByDescending(x => x.Value)
+            .ThenByDescending(x => x.Key)
+            .ToList();
     }
 
     private List<int> GetSplitGroups(int count)
@@ -86,33 +149,4 @@ public class ChipController : MonoBehaviour
             default: return new List<int> { 3, 3, 2 };
         }
     }
-
-    public List<KeyValuePair<int, int>> BreakDownAmount()
-    {
-        Dictionary<int, int> layout = new Dictionary<int, int>();
-        int remaining = wallet;
-        var sortedValues = chipValues.OrderByDescending(v => v);
-
-        foreach (int chip in sortedValues)
-        {
-            if (remaining >= chip)
-            {
-                int count = remaining / chip;
-                layout.Add(chip, count);
-                remaining %= chip;
-            }
-        }
-
-        return layout.OrderByDescending(x => x.Value)
-                     .ThenByDescending(x => x.Key)
-                     .ToList();
-    }
-
-    private void ClearChips()
-    {
-        foreach (var chip in spawnedChips) if (chip != null) Destroy(chip.gameObject);
-        spawnedChips.Clear();
-    }
 }
-
-

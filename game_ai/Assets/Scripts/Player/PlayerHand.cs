@@ -2,29 +2,67 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerHand : MonoBehaviour
 {
-    public List<CardModel> handCards;
-    public ChipController chipController;
-    public TextMeshProUGUI textMeshProUGUI;
+    [SerializeField] public List<CardModel> handCards;
+    [SerializeField] private TextMeshProUGUI walletText;
+    [SerializeField] private ChipController chipController;
+    [SerializeField] private int _wallet = 1000;
+    [SerializeField] private Image dealerIcon;
+
+    public int CurrentBet = 0;
+    public bool IsFolded = false;
+    public bool HasActed = false;
+
+    public int Wallet
+    {
+        get => _wallet;
+        private set
+        {
+            _wallet = value;
+            walletText.text = _wallet.ToString() + "$";
+            if (chipController != null)
+            {
+                chipController.RenderChips(_wallet);
+            }
+        }
+    }
 
     private void Reset()
     {
         handCards.AddRange(GetComponentsInChildren<CardModel>());
         chipController = GetComponentInChildren<ChipController>();
-        textMeshProUGUI = GetComponentInChildren<TextMeshProUGUI>();
+        walletText = GetComponentInChildren<TextMeshProUGUI>();
+        dealerIcon = transform.GetChild(0).GetComponent<Image>();
     }
 
     private void Start()
     {
-        setPrice();
+        dealerIcon.enabled = false;
     }
 
-    public void setPrice()
+    public void AddMoney(int amount)
     {
-        textMeshProUGUI.text = chipController.wallet.ToString();
+        if (amount < 0) return;
+        Wallet += amount;
     }
+
+    public bool SpendMoney(int amount)
+    {
+        if (amount > _wallet) return false;
+        Wallet -= amount;
+        return true;
+    }
+
+    public int RequestMoney(int amount)
+    {
+        int actualAmount = Mathf.Min(amount, Wallet);
+        Wallet -= actualAmount;
+        return actualAmount;
+    }
+
     public IEnumerator ReceiveCard(CardData data, int index)
     {
         var card = handCards[index];
@@ -40,6 +78,12 @@ public class PlayerHand : MonoBehaviour
 
     public void ResetHand()
     {
+        IsFolded = false;
+        HasActed = false;
+        CurrentBet = 0;
         foreach (var c in handCards) c.ShowCard(false);
     }
+
+    public void SetDealerActive(bool isActive) => dealerIcon.enabled = isActive;
+
 }

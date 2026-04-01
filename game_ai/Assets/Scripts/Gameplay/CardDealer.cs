@@ -6,36 +6,18 @@ public class CardDealer : MonoBehaviour
 {
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private TableManager tableManager;
-    [SerializeField] private List<PlayerHand> players;
 
     private void Reset()
     {
         deckManager = GetComponentInChildren<DeckManager>();
         tableManager = GetComponentInChildren<TableManager>();
-        players.AddRange(GetComponentsInChildren<PlayerHand>());
     }
 
-    private void Start()
-    {
-        SetUpData();
-        StartCoroutine(StartNewGame());
-    }
-
-    void SetUpData()
+    public void SetUpData(List<PlayerHand> players)
     {
         deckManager.PrepareDeck();
         tableManager.ResetTable();
         foreach (var p in players) p.ResetHand();
-    }
-
-    public IEnumerator StartNewGame()
-    {
-        StartCoroutine(PlayerDraw());
-        yield return new WaitForSeconds(0.5f);
-
-        StartCoroutine(TableDraw());
-
-        yield return null;
     }
 
     /// <summary>
@@ -43,7 +25,7 @@ public class CardDealer : MonoBehaviour
     /// </summary>
     /// <returns></returns>
 
-    private IEnumerator TableDraw()
+    public IEnumerator DealFlop()
     {
         deckManager.Burn();
         yield return new WaitForSeconds(2f);
@@ -54,38 +36,26 @@ public class CardDealer : MonoBehaviour
             yield return new WaitForSeconds(0.15f);
             tableManager.TableFlip(i);
         }
-
-        yield return new WaitForSeconds(2f);
-        StartCoroutine(TableDrawMore());        
-        yield return new WaitForSeconds(2f);
-        StartCoroutine(TableDrawMore());
-        yield return new WaitForSeconds(2f);
-        StartCoroutine(TableDrawMore());
     }
 
-    private IEnumerator TableDrawMore()
+    public IEnumerator DealNextCommunityCard(int index)
     {
-        int nextIndex = tableManager.getCurrentCard() + 1;
-
-        if (nextIndex < 5)
-        {
-            tableManager.SetCard(nextIndex, deckManager.Draw());
-            yield return new WaitForSeconds(0.3f);
-            tableManager.TableFlip(nextIndex);
-        }
+        yield return new WaitForSeconds(0.5f);
+        tableManager.SetCard(index, deckManager.Draw());
+        tableManager.TableFlip(index);
     }
-
 
     /// <summary>
     ///  Control player 
     /// </summary>
     /// <returns></returns>
-    public IEnumerator PlayerDraw()
+
+    public IEnumerator PlayerDraw(List<PlayerHand> players)
     {
         List<Coroutine> playerRoutines = new List<Coroutine>();
         foreach (var p in players)
         {
-            playerRoutines.Add(StartCoroutine(SinglePlayerDrawRoutine(p)));
+            playerRoutines.Add(StartCoroutine(DealInitialCards(p)));
         }
 
         foreach (var routine in playerRoutines)
@@ -99,7 +69,20 @@ public class CardDealer : MonoBehaviour
         }
     }
 
-    private IEnumerator SinglePlayerDrawRoutine(PlayerHand p)
+    public IEnumerator DealInitialCards(List<PlayerHand> players)
+    {
+        for (int round = 0; round < 2; round++)
+        {
+            foreach (var p in players)
+            {
+                if (p.IsFolded) continue;
+                var cardData = deckManager.Draw();
+                yield return p.ReceiveCard(cardData, round);
+            }
+        }
+    }
+
+    private IEnumerator DealInitialCards(PlayerHand p)
     {
         for (int round = 0; round < 2; round++)
         {

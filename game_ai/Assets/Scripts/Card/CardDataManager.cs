@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CardDataManager : MonoBehaviour
 {
@@ -13,6 +14,7 @@ public class CardDataManager : MonoBehaviour
     public List<Sprite> backs;
     public List<Sprite> chips;
     public Sprite dealer;
+    public Image chipPrefab;
 
     private void Awake()
     {
@@ -35,6 +37,7 @@ public class CardDataManager : MonoBehaviour
         backs.AddRange(Resources.LoadAll<Sprite>("Cards/Back"));
         chips.AddRange(Resources.LoadAll<Sprite>("Chips/ChipNumber"));
         dealer = Resources.Load<Sprite>("Chips/Dealer");
+        chipPrefab = Resources.Load<Image>("Prefabs/chip");
     }
 
     public Sprite GetChip(int index)
