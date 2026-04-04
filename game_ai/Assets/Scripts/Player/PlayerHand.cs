@@ -6,16 +6,17 @@ using UnityEngine.UI;
 
 public class PlayerHand : MonoBehaviour
 {
-    [SerializeField] public List<CardModel> handCards;
     [SerializeField] private TextMeshProUGUI walletText;
-    [SerializeField] private ChipController chipController;
     [SerializeField] private int _wallet = 1000;
     [SerializeField] private Image dealerIcon;
+
+    public List<CardModel> handCards;
+    public ChipController chipController;
 
     public int CurrentBet = 0;
     public bool IsFolded = false;
     public bool HasActed = false;
-
+    public bool IsHuman;
     public int Wallet
     {
         get => _wallet;
@@ -36,11 +37,6 @@ public class PlayerHand : MonoBehaviour
         chipController = GetComponentInChildren<ChipController>();
         walletText = GetComponentInChildren<TextMeshProUGUI>();
         dealerIcon = transform.GetChild(0).GetComponent<Image>();
-    }
-
-    private void Start()
-    {
-        dealerIcon.enabled = false;
     }
 
     public void AddMoney(int amount)
@@ -85,5 +81,4 @@ public class PlayerHand : MonoBehaviour
     }
 
     public void SetDealerActive(bool isActive) => dealerIcon.enabled = isActive;
-
 }

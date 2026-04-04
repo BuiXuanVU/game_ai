@@ -2,11 +2,10 @@
 using UnityEngine;
 
 public class PotController : MonoBehaviour
-{
-    [SerializeField] private ChipController chipController;
+{ 
     [SerializeField] private TextMeshProUGUI textMeshProUGUI;
     [SerializeField] private int _pot = 0;
-
+    public ChipController chipController;
     public int Pot
     {
         get => _pot;

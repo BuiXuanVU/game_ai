@@ -149,4 +149,11 @@ public class ChipController : MonoBehaviour
             default: return new List<int> { 3, 3, 2 };
         }
     }
+
+    public Vector2 GetScreenPosition()
+    {
+        RectTransform rt = GetComponent<RectTransform>();
+
+        return RectTransformUtility.WorldToScreenPoint(null, rt.position);
+    }
 }

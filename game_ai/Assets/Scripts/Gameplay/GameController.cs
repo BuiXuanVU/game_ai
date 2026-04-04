@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-public enum GamePhase { PreFlop, Flop, Turn, River, Showdown }
-
 public class PokerGameController : MonoBehaviour
 {
+    private TurnManager turnManager = new TurnManager();
+    private BettingManager bettingManager = new BettingManager();
+    private PokerAI ai = new PokerAI();
+
     [Header("References")]
     [SerializeField] private CardDealer cardDealer;
     [SerializeField] private PotController potController;
     [SerializeField] private List<PlayerHand> players;
+    [SerializeField] private ChipSender chipSender;
 
     [Header("Game Config")]
     [SerializeField] private int smallBlind = 10;
     [SerializeField] private int bigBlind = 20;
 
     private int dealerIndex = -1;
-    private int currentPlayerIndex;
-    private int highestBet;
-
     private GamePhase currentPhase;
 
     private void Reset()
@@ -29,134 +29,144 @@ public class PokerGameController : MonoBehaviour
         players.AddRange(GetComponentsInChildren<PlayerHand>());
     }
 
-
-    private void Start() => StartCoroutine(GameLoop());
+    private void Start()
+    {
+        StartCoroutine(GameLoop());
+    }
 
     // ==========================================
-    // 1. (MASTER LOOP)
+    // GAME LOOP
     // ==========================================
     private IEnumerator GameLoop()
     {
         while (true)
         {
-            SetupNewRound();
-            yield return new WaitForSeconds(1f);
+            yield return StartCoroutine(StartNewRound());
+            yield return StartCoroutine(PreFlopPhase());
 
-            // PRE-FLOP
-            currentPhase = GamePhase.PreFlop;
-            SetupBlinds();
-            yield return StartCoroutine(cardDealer.PlayerDraw(players));
-            yield return StartCoroutine(RunBettingPhase());
-
-            // FLOP
             if (!IsGameOverEarly())
-            {
-                currentPhase = GamePhase.Flop;
-                PrepareNextBettingRound();
-                yield return StartCoroutine(cardDealer.DealFlop());
-                yield return StartCoroutine(RunBettingPhase());
-            }
+                yield return StartCoroutine(FlopPhase());
 
-            // TURN
             if (!IsGameOverEarly())
-            {
-                currentPhase = GamePhase.Turn;
-                PrepareNextBettingRound();
-                yield return StartCoroutine(cardDealer.DealNextCommunityCard(3));
-                yield return StartCoroutine(RunBettingPhase());
-            }
+                yield return StartCoroutine(TurnPhase());
 
-            // RIVER
             if (!IsGameOverEarly())
-            {
-                currentPhase = GamePhase.River;
-                PrepareNextBettingRound();
-                yield return StartCoroutine(cardDealer.DealNextCommunityCard(4));
-                yield return StartCoroutine(RunBettingPhase());
-            }
+                yield return StartCoroutine(RiverPhase());
 
-            // SHOWDOWN
-            currentPhase = GamePhase.Showdown;
-            if (!IsGameOverEarly())
-            {
-                foreach (var p in players.Where(x => !x.IsFolded)) p.FlipCard();
-            }
-            ResolveWinner();
+            yield return StartCoroutine(ShowdownPhase());
 
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(3f);
         }
     }
 
     // ==========================================
-    // 2. LOGIC
+    // PLAYER TURN
     // ==========================================
-    private IEnumerator RunBettingPhase()
+    private IEnumerator PlayerTurn(PlayerHand player)
     {
-        Debug.Log($"--- BẮT ĐẦU VÒNG CƯỢC: {currentPhase} ---");
+        PlayerAction action = null;
 
-        foreach (var p in players) p.HasActed = false;
-
-        while (!IsBettingRoundFinished())
+        if (player.IsHuman)
         {
-            PlayerHand p = players[currentPlayerIndex];
-            if (!p.IsFolded && p.Wallet > 0)
-            {
-                yield return StartCoroutine(PlayerTurn(p));
-                p.HasActed = true;
-            }
-
-            currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+            yield return StartCoroutine(WaitForHumanAction(player, (a) => action = a));
         }
-        EndBettingRound();
+        else
+        {
+            yield return StartCoroutine(
+                ai.DecideAction(player, bettingManager.HighestBet, (a) => action = a)
+            );
+        }
+
+        yield return StartCoroutine(ExecuteAction(player, action));
     }
 
-    private bool IsBettingRoundFinished()
+    private IEnumerator WaitForHumanAction(PlayerHand player, System.Action<PlayerAction> callback)
     {
-        var activePlayers = players.Where(p => !p.IsFolded).ToList();
-        if (activePlayers.Count <= 1) return true;
-        return activePlayers.All(p => p.HasActed && (p.CurrentBet == highestBet || p.Wallet == 0));
+        UIManager.Instance.Show(player, bettingManager.HighestBet);
+
+        PlayerAction action = null;
+
+        System.Action<PlayerAction> handler = null;
+        handler = (a) =>
+        {
+            action = a;
+            UIManager.Instance.OnActionSelected -= handler;
+        };
+
+        UIManager.Instance.OnActionSelected += handler;
+
+        yield return new WaitUntil(() => action != null);
+
+        UIManager.Instance.Hide();
+
+        callback?.Invoke(action);
+    }
+
+    private IEnumerator ExecuteAction(PlayerHand player, PlayerAction action)
+    {
+        switch (action.Type)
+        {
+            case PlayerActionType.Fold:
+                Fold(player);
+                break;
+
+            case PlayerActionType.Check:
+                Check(player);
+                break;
+
+            case PlayerActionType.Call:
+                yield return StartCoroutine(Call(player));
+                break;
+
+            case PlayerActionType.Raise:
+                yield return StartCoroutine(Raise(player, action.RaiseAmount));
+
+                // 🔥 RESET ROUND WHEN RAISE
+                foreach (var p in players)
+                    p.HasActed = false;
+
+                player.HasActed = true;
+                break;
+        }
+    }
+
+    // ==========================================
+    // BETTING PHASE
+    // ==========================================
+    private IEnumerator RunBettingPhase(bool reset = true)
+    {
+        Debug.Log($"--- BETTING: {currentPhase} ---");
+
+        if (reset)
+            bettingManager.ResetRound(players);
+
+        while (!bettingManager.IsRoundFinished(players))
+        {
+            var player = turnManager.GetCurrent(players);
+
+            if (!player.IsFolded && player.Wallet > 0)
+            {
+                yield return StartCoroutine(PlayerTurn(player));
+                player.HasActed = true;
+            }
+
+            turnManager.MoveNext(players);
+        }
+
+        Debug.Log($"Pot: {potController.Pot}");
     }
 
     private void PrepareNextBettingRound()
     {
-        highestBet = 0;
-        foreach (var p in players)
-        {
-            p.CurrentBet = 0;
-            p.HasActed = false;
-        }
-        currentPlayerIndex = (dealerIndex + 1) % players.Count;
-    }
-
-    private void EndBettingRound()
-    {
-        Debug.Log($"Vòng cược kết thúc. Tổng Pot: {potController.Pot}");
+        bettingManager.ResetRound(players);
+        turnManager.SetStartIndex((dealerIndex + 1) % players.Count);
     }
 
     private bool IsGameOverEarly() => players.Count(p => !p.IsFolded) <= 1;
 
     // ==========================================
-    // 3. PLAYER
+    // ACTIONS
     // ==========================================
-    private IEnumerator PlayerTurn(PlayerHand player)
-    {
-        yield return new WaitForSeconds(0.5f);
-
-        if (player.CurrentBet < highestBet)
-        {
-            int rand = Random.Range(0, 10);
-            if (rand < 2) Fold(player);
-            else if (rand < 8) Call(player);
-            else Raise(player, 50);
-        }
-        else
-        {
-            int rand = Random.Range(0, 10);
-            if (rand < 7) Check(player);
-            else Raise(player, 50);
-        }
-    }
-
     public void Fold(PlayerHand player)
     {
         player.IsFolded = true;
@@ -168,33 +178,110 @@ public class PokerGameController : MonoBehaviour
         Debug.Log($"{player.name} CHECK");
     }
 
-    public void Call(PlayerHand player)
+    public IEnumerator Call(PlayerHand player)
     {
-        int amountNeeded = highestBet - player.CurrentBet;
-        ExecuteBet(player, amountNeeded);
-        Debug.Log($"{player.name} CALL {amountNeeded}");
+        int amount = bettingManager.HighestBet - player.CurrentBet;
+
+        yield return StartCoroutine(ExecuteBet(player, amount));
+
+        Debug.Log($"{player.name} CALL {amount}");
     }
 
-    public void Raise(PlayerHand player, int raiseAmount)
+    public IEnumerator Raise(PlayerHand player, int raiseAmount)
     {
-        int callAmount = highestBet - player.CurrentBet;
-        int totalToSub = callAmount + raiseAmount;
+        int callAmount = bettingManager.HighestBet - player.CurrentBet;
+        int total = callAmount + raiseAmount;
 
-        ExecuteBet(player, totalToSub);
-        highestBet = player.CurrentBet;
-        Debug.Log($"{player.name} RAISE lên {highestBet}");
+        yield return StartCoroutine(ExecuteBet(player, total));
+
+        bettingManager.SetHighestBet(player.CurrentBet);
+
+        Debug.Log($"{player.name} RAISE → {player.CurrentBet}");
     }
 
-    private void ExecuteBet(PlayerHand player, int amount)
+    private IEnumerator ExecuteBet(PlayerHand player, int amount)
     {
         int actualBet = player.RequestMoney(amount);
 
         player.CurrentBet += actualBet;
-        potController.AddToPot(actualBet);
+
+        if (actualBet > 0)
+        {
+            yield return StartCoroutine(
+                chipSender.SendRoutine(player.chipController,
+                    potController.chipController,
+                    actualBet
+                )
+            );
+
+            potController.AddToPot(actualBet);
+        }
     }
 
     // ==========================================
-    // 4. SETUP VÀ KẾT QUẢ
+    // ROUND FLOW
+    // ==========================================
+    private IEnumerator StartNewRound()
+    {
+        SetupNewRound();
+        yield return new WaitForSeconds(1f);
+
+        yield return StartCoroutine(SetupBlinds());
+        yield return StartCoroutine(cardDealer.PlayerDraw(players));
+    }
+
+    private IEnumerator PreFlopPhase()
+    {
+        currentPhase = GamePhase.PreFlop;
+        yield return StartCoroutine(RunBettingPhase());
+    }
+
+    private IEnumerator FlopPhase()
+    {
+        currentPhase = GamePhase.Flop;
+        PrepareNextBettingRound();
+
+        yield return StartCoroutine(cardDealer.DealFlop());
+        yield return StartCoroutine(RunBettingPhase());
+    }
+
+    private IEnumerator TurnPhase()
+    {
+        currentPhase = GamePhase.Turn;
+        PrepareNextBettingRound();
+
+        yield return StartCoroutine(cardDealer.DealNextCommunityCard(3));
+        yield return StartCoroutine(RunBettingPhase());
+    }
+
+    private IEnumerator RiverPhase()
+    {
+        currentPhase = GamePhase.River;
+        PrepareNextBettingRound();
+
+        yield return StartCoroutine(cardDealer.DealNextCommunityCard(4));
+        yield return StartCoroutine(RunBettingPhase());
+    }
+
+    private IEnumerator ShowdownPhase()
+    {
+        currentPhase = GamePhase.Showdown;
+
+        yield return new WaitForSeconds(1f);
+
+        if (!IsGameOverEarly())
+        {
+            foreach (var p in players.Where(x => !x.IsFolded))
+                p.FlipCard();
+        }
+
+        ResolveWinner();
+
+        yield return new WaitForSeconds(3f);
+    }
+
+    // ==========================================
+    // SETUP
     // ==========================================
     private void SetupNewRound()
     {
@@ -202,51 +289,86 @@ public class PokerGameController : MonoBehaviour
         dealerIndex = GetNextValidPlayerIndex(dealerIndex);
 
         potController.ClearPot();
-        highestBet = 0;
+        bettingManager.SetHighestBet(0);
 
-        for (int i = 0; i < players.Count; i++)
+        foreach (var p in players)
         {
-            var p = players[i];
-            p.SetDealerActive(i == dealerIndex);
             p.ResetHand();
-            if (p.Wallet <= 0) p.IsFolded = true;
+            p.SetDealerActive(p == players[dealerIndex]);
+
+            if (p.Wallet <= 0)
+                p.IsFolded = true;
         }
+    }
+
+    private IEnumerator SetupBlinds()
+    {
+        int sbIdx = (dealerIndex + 1) % players.Count;
+        int bbIdx = (dealerIndex + 2) % players.Count;
+
+        yield return StartCoroutine(ExecuteBet(players[sbIdx], smallBlind));
+        yield return StartCoroutine(ExecuteBet(players[bbIdx], bigBlind));
+
+        bettingManager.SetHighestBet(bigBlind);
+
+        turnManager.SetStartIndex((bbIdx + 1) % players.Count);
     }
 
     private int GetNextValidPlayerIndex(int currentIndex)
     {
         int next = (currentIndex + 1) % players.Count;
         int checks = 0;
+
         while (players[next].Wallet <= 0 && checks < players.Count)
         {
             next = (next + 1) % players.Count;
             checks++;
         }
+
         return next;
-    }
-
-    private void SetupBlinds()
-    {
-        int sbIdx = (dealerIndex + 1) % players.Count;
-        int bbIdx = (dealerIndex + 2) % players.Count;
-
-        ExecuteBet(players[sbIdx], smallBlind);
-        ExecuteBet(players[bbIdx], bigBlind);
-        highestBet = bigBlind;
-
-        currentPlayerIndex = (bbIdx + 1) % players.Count;
     }
 
     private void ResolveWinner()
     {
-        var winners = players.Where(p => !p.IsFolded).ToList();
-        if (winners.Count == 0) return;
+        var activePlayers = players.Where(p => !p.IsFolded).ToList();
+
+        var results = new Dictionary<PlayerHand, HandResult>();
+
+        // 1. Evaluate tất cả player
+        foreach (var p in activePlayers)
+        {
+            var cards = new List<CardData>();
+
+            cards.AddRange(p.handCards.Select(c => c.data));
+            cards.AddRange(cardDealer.CommunityCards());
+
+            results[p] = PokerHandEvaluator.EvaluateHand(cards);
+        }
+
+        PlayerHand bestPlayer = activePlayers[0];
+        HandResult bestHand = results[bestPlayer];
+
+        foreach (var p in activePlayers)
+        {
+            var current = results[p];
+
+            if (PokerHandEvaluator.CompareHands(current, bestHand) > 0)
+            {
+                bestHand = current;
+                bestPlayer = p;
+            }
+        }
+
+        var winners = activePlayers
+            .Where(p => PokerHandEvaluator.CompareHands(results[p], bestHand) == 0)
+            .ToList();
 
         int share = potController.Pot / winners.Count;
+
         foreach (var w in winners)
         {
             w.AddMoney(share);
-            Debug.Log($"Winner: {w.name} nhận {share}");
+            Debug.Log($"🏆 {w.name} thắng với {results[w].Rank}");
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class CardDealer : MonoBehaviour
@@ -94,5 +95,12 @@ public class CardDealer : MonoBehaviour
                 yield return new WaitForSeconds(0.2f);
             }
         }
+    }
+
+    public List<CardData> CommunityCards()
+    {
+        return tableManager.communityCards
+            .Select(c => c.data)
+            .ToList();
     }
 }
