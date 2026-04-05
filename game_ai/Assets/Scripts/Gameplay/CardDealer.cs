@@ -88,6 +88,7 @@ public class CardDealer : MonoBehaviour
     {
         return tableManager.communityCards
             .Select(c => c.data)
+            .Where(c => c != null)
             .ToList();
     }
 }

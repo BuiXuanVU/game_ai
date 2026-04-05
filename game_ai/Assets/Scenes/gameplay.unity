@@ -2727,6 +2727,9 @@ GameObject:
   - component: {fileID: 1179043985}
   - component: {fileID: 1179043987}
   - component: {fileID: 1179043988}
+  - component: {fileID: 1179043991}
+  - component: {fileID: 1179043990}
+  - component: {fileID: 1179043989}
   m_Layer: 5
   m_Name: Table
   m_TagString: Untagged
@@ -2821,14 +2824,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59a3e39f64039b04cbb3dc808634b362, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PokerGameController
-  cardDealer: {fileID: 1179043987}
+  roundManager: {fileID: 1179043991}
+  bettingHandler: {fileID: 1179043990}
   potController: {fileID: 1465957752}
+  cardDealer: {fileID: 1179043987}
+  ai: {fileID: 1179043989}
   players:
   - {fileID: 2051379576}
   - {fileID: 1447437280}
-  chipSender: {fileID: 1393876806}
   smallBlind: 10
   bigBlind: 20
+--- !u!114 &1179043989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179043981}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbce05db6031eb243acf981e3e54bdc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PokerAI
+--- !u!114 &1179043990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179043981}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e8fb19502ba313428af3183d553cc7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BettingHandler
+  potController: {fileID: 1465957752}
+  chipSender: {fileID: 1393876806}
+--- !u!114 &1179043991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179043981}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3f5ca50926e63a4a99cab1f31836f1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoundManager
 --- !u!1 &1194644287
 GameObject:
   m_ObjectHideFlags: 0
@@ -4447,6 +4490,7 @@ MonoBehaviour:
   walletText: {fileID: 1523315781}
   _wallet: 1000
   dealerIcon: {fileID: 94072278}
+  history: []
   handCards:
   - {fileID: 994908286}
   - {fileID: 161090093}
@@ -5793,6 +5837,7 @@ MonoBehaviour:
   walletText: {fileID: 1278186863}
   _wallet: 1000
   dealerIcon: {fileID: 640847344}
+  history: []
   handCards:
   - {fileID: 692996966}
   - {fileID: 319312189}

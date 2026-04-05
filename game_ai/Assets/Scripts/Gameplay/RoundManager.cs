@@ -1,91 +1,32 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
-public class RoundManager
+public class RoundManager : MonoBehaviour
 {
-    private CardDealer dealer;
-    private PotController pot;
-    private List<PlayerHand> players;
+    private int dealerIndex = -1;
 
-    private BettingManager betting = new BettingManager();
-    private TurnManager turn = new TurnManager();
-
-    public bool IsEarlyWin => players.Count(p => !p.IsFolded) <= 1;
-
-    public RoundManager(CardDealer d, PotController p, List<PlayerHand> pl)
+    public void SetupNewRound(List<PlayerHand> players)
     {
-        dealer = d;
-        pot = p;
-        players = pl;
-    }
-
-    public IEnumerator PlayRound()
-    {
-        Setup();
-
-        yield return Blinds();
-        yield return dealer.PlayerDraw(players);
-
-        yield return BettingPhase();
-        if (IsEarlyWin) yield break;
-
-        yield return Flop();
-        if (IsEarlyWin) yield break;
-
-        yield return Turn();
-        if (IsEarlyWin) yield break;
-
-        yield return River();
-    }
-
-    private void Setup()
-    {
-        pot.ClearPot();
-        betting.SetHighestBet(0);
-
+        dealerIndex = GetNextValidPlayerIndex(players, dealerIndex);
         foreach (var p in players)
-            p.ResetHand();
-    }
-
-    private IEnumerator Blinds()
-    {
-        yield return null;
-    }
-
-    private IEnumerator BettingPhase()
-    {
-        while (!betting.IsRoundFinished(players))
         {
-            var p = turn.GetCurrent(players);
-
-            if (!p.IsFolded)
-                yield return PlayerTurn(p);
-
-            turn.MoveNext(players);
+            p.ResetHand();
+            p.SetDealerActive(p == players[dealerIndex]);
+            if (p.Wallet <= 0) p.IsFolded = true;
         }
     }
 
-    private IEnumerator PlayerTurn(PlayerHand player)
+    private int GetNextValidPlayerIndex(List<PlayerHand> players, int currentIndex)
     {
-        yield return null;
+        int next = (currentIndex + 1) % players.Count;
+        int checks = 0;
+        while (players[next].Wallet <= 0 && checks < players.Count)
+        {
+            next = (next + 1) % players.Count;
+            checks++;
+        }
+        return next;
     }
 
-    private IEnumerator Flop()
-    {
-        yield return dealer.DealFlop();
-        yield return BettingPhase();
-    }
-
-    private IEnumerator Turn()
-    {
-        yield return dealer.DealNextCommunityCard(3);
-        yield return BettingPhase();
-    }
-
-    private IEnumerator River()
-    {
-        yield return dealer.DealNextCommunityCard(4);
-        yield return BettingPhase();
-    }
+    public int DealerIndex => dealerIndex;
 }

@@ -27,7 +27,7 @@ public class ChipSender : MonoBehaviour
     // 🎯 MAIN
     // =========================
 
-    public IEnumerator SendRoutine(ChipController from, ChipController to, int amount)
+    public IEnumerator SendRoutine(ChipController from, ChipController to)
     {
         Vector2 start = ScreenToCanvas(from.GetScreenPosition());
         Vector2 end = ScreenToCanvas(to.GetScreenPosition());

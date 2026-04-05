@@ -3,29 +3,32 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-public class PokerAI
+public class PokerAI : MonoBehaviour
 {
     // Danh sách ký ức của riêng AI
     private List<HandHistory> memory = new List<HandHistory>();
 
-    public IEnumerator DecideAction(PokerGameController controller,PlayerHand aiPlayer, int highestBet, Action<PlayerAction> callback)
+    // Coroutine quyết định hành động
+    public IEnumerator DecideActionCoroutine(BettingHandler bettingHandler, PlayerHand aiPlayer, int highestBet, GamePhase phase, List<ActionRecord> roundHistory, Action<PlayerAction> callback)
     {
-        // 2. Chụp ảnh trạng thái
-        GameStateSnapshot snapshot = controller.GetCurrentState(aiPlayer);
+        // 1. Chụp ảnh trạng thái từ GameController
+        GameStateSnapshot snapshot = bettingHandler.GetComponent<PokerGameController>().GetCurrentState(aiPlayer);
 
-        // 3. Xây dựng Prompt
+        // 2. Xây dựng prompt cho AI
         string prompt = PromptBuilder.Generate(snapshot, memory);
-
         Debug.Log($"<color=yellow>[AI Prompt Generated]</color>\n{prompt}");
 
-        // 4. (TƯƠNG LAI) Gửi prompt tới API và đợi phản hồi
-        // Hiện tại ta giả lập một kết quả JSON từ LLM
-        yield return new WaitForSeconds(2f); // Giả lập thời gian suy nghĩ
+        // 3. Giả lập thời gian suy nghĩ của AI
+        yield return new WaitForSeconds(1f);
 
-        // Giả sử LLM trả về: {"action": "Call", "amount": 0, "reason": "I have a pair of Jacks and the pot is worth it."}
-        PlayerAction resultAction = new PlayerAction(PlayerActionType.Call);
+        // 4. Giả lập hành động AI (ở đây chỉ Call hoặc Check đơn giản)
+        PlayerAction resultAction;
+        if (aiPlayer.CurrentBet < highestBet)
+            resultAction = new PlayerAction(PlayerActionType.Call);
+        else
+            resultAction = new PlayerAction(PlayerActionType.Check);
 
-        // Cập nhật ký ức sau khi ván đấu kết thúc (sẽ được controller gọi)
+        // 5. Trả hành động cho BettingHandler
         callback?.Invoke(resultAction);
     }
 

@@ -38,7 +38,12 @@ public class TableManager : MonoBehaviour
 
     public void ResetTable()
     {
-        foreach (var c in communityCards) c.ShowCard(false);
+        CurrentCard = 0;
+        foreach (var c in communityCards)
+        {
+            c.data = null;
+            c.ShowCard(false);
+        }
     }
 
     public int getCurrentCard()=> CurrentCard;

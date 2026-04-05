@@ -6,14 +6,10 @@ public class DeckManager : MonoBehaviour
     private CardDataManager dataManager;
     private List<CardData> deck = new List<CardData>();
     private int currentIndex = 0;
-
-    private void Start()
-    {
-        dataManager = CardDataManager.Instance;
-    }
     public void PrepareDeck()
     {
-        
+        dataManager ??= CardDataManager.Instance;
+
         deck.Clear();
         Sprite randomBack = dataManager.backs[UnityEngine.Random.Range(0, dataManager.backs.Count)];
 
