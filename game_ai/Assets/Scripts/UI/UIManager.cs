@@ -94,8 +94,11 @@ public class UIManager : MonoBehaviour
     {
         int callAmount = highestBet - currentPlayer.CurrentBet;
 
-        int minRaise = callAmount + 1;
-        int maxRaise = currentPlayer.Wallet;
+        int minRaise = 1;
+        int maxRaise = currentPlayer.Wallet - callAmount;
+        if (maxRaise < minRaise)
+            return;
+
         buttonsUI.gameObject.SetActive(false);
         sliderUI.Setup(minRaise, maxRaise);
     }

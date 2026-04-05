@@ -66,3 +66,62 @@ public class ShowdownResult
     public HandRank handRank;
     public List<CardDataDTO> cards;
 }
+
+[System.Serializable]
+public class LlmDecisionRequest
+{
+    public string phase;
+    public int potSize;
+    public int highestBet;
+    public int callAmount;
+    public int minRaiseAmount;
+    public int maxRaiseAmount;
+    public bool canFold;
+    public bool canCheck;
+    public bool canCall;
+    public bool canRaise;
+    public string promptPreview;
+    public LlmPlayerState me;
+    public List<LlmPlayerState> opponents;
+    public List<CardDataDTO> communityCards;
+    public List<LlmActionRecord> currentRoundHistory;
+    public List<LlmHandMemory> memory;
+}
+
+[System.Serializable]
+public class LlmPlayerState
+{
+    public string name;
+    public int stack;
+    public int currentBet;
+    public bool isFolded;
+    public bool isAllIn;
+    public List<CardDataDTO> hand;
+}
+
+[System.Serializable]
+public class LlmActionRecord
+{
+    public string phase;
+    public string playerName;
+    public string action;
+    public int amount;
+}
+
+[System.Serializable]
+public class LlmHandMemory
+{
+    public int roundNumber;
+    public string winnerName;
+    public int finalPot;
+    public string summary;
+}
+
+[System.Serializable]
+public class LlmDecisionResponse
+{
+    public string action;
+    public int amount;
+    public string reason;
+    public string rawResponse;
+}

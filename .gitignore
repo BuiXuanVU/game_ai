@@ -74,6 +74,11 @@ ServerData/
 *.py[cod]
 *.pyo
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 [Aa]gent/models/
 *.pt
 *.pth

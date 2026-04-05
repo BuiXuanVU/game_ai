@@ -185,7 +185,7 @@ public class PokerGameController : MonoBehaviour
     private void SaveMatchResult(List<PlayerHand> winners, int finalPot)
     {
         string winnerNames = string.Join(", ", winners.Select(w => w.name));
-        matchHistory.Add(new HandHistory
+        HandHistory handHistory = new HandHistory
         {
             roundNumber = matchHistory.Count + 1,
             allActions = new List<ActionRecord>(currentRoundHistory),
@@ -194,7 +194,9 @@ public class PokerGameController : MonoBehaviour
             summary = winners.Count == 1
                 ? $"Winner: {winnerNames} won {finalPot} chips."
                 : $"Split pot: {winnerNames} shared {finalPot} chips."
-        });
+        };
+        matchHistory.Add(handHistory);
+        ai?.LearnFromRound(handHistory);
         currentRoundHistory.Clear();
     }
 

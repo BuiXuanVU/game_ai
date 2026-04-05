@@ -5,61 +5,66 @@ using UnityEngine;
 
 public static class PromptBuilder
 {
-    public static string Generate(GameStateSnapshot state, List<HandHistory> memory)
+    public static string Generate(LlmDecisionRequest request)
     {
         StringBuilder prompt = new StringBuilder();
 
-        // 1. Vai trò và bối cảnh
-        prompt.AppendLine("You are a professional Poker AI player in a Texas Hold'em game.");
-        prompt.AppendLine($"Current Game Phase: {state.phase}");
-        prompt.AppendLine($"Pot Size: {state.potSize} chips. Current Highest Bet to call: {state.highestBet} chips.");
+        prompt.AppendLine("You are a disciplined Texas Hold'em poker agent.");
+        prompt.AppendLine("Choose exactly one legal action.");
+        prompt.AppendLine($"Phase: {request.phase}");
+        prompt.AppendLine($"Pot: {request.potSize}");
+        prompt.AppendLine($"HighestBet: {request.highestBet}");
+        prompt.AppendLine($"CallAmount: {request.callAmount}");
+        prompt.AppendLine($"CanCheck: {request.canCheck}");
+        prompt.AppendLine($"CanCall: {request.canCall}");
+        prompt.AppendLine($"CanRaise: {request.canRaise}");
+        prompt.AppendLine($"RaiseRange: {request.minRaiseAmount}..{request.maxRaiseAmount}");
 
-        // 2. Thông tin bài của AI
-        string myCards = string.Join(", ", state.me.hand.Select(c => c.displayName));
-        prompt.AppendLine($"--- YOUR INFO ---");
-        prompt.AppendLine($"Your Name: {state.me.name}");
-        prompt.AppendLine($"Your Cards: [{myCards}]");
-        prompt.AppendLine($"Your Stack: {state.me.stack} chips. Your Bet this round: {state.me.currentBet}.");
-
-        // 3. Thông tin bài chung
-        if (state.communityCards.Count > 0)
+        if (request.me != null)
         {
-            string community = string.Join(", ", state.communityCards.Select(c => c.displayName));
-            prompt.AppendLine($"Community Cards on table: [{community}]");
+            string myCards = request.me.hand != null && request.me.hand.Count > 0
+                ? string.Join(", ", request.me.hand.Select(c => c.displayName))
+                : "Unknown";
+
+            prompt.AppendLine("[Me]");
+            prompt.AppendLine($"{request.me.name} | stack={request.me.stack} | currentBet={request.me.currentBet} | cards=[{myCards}]");
         }
 
-        // 4. Thông tin đối thủ
-        prompt.AppendLine("--- OPPONENTS ---");
-        foreach (var opp in state.opponents)
+        if (request.communityCards != null && request.communityCards.Count > 0)
         {
-            string status = opp.isFolded ? "Folded" : (opp.isAllIn ? "All-In" : "Active");
-            prompt.AppendLine($"- {opp.name}: Stack {opp.stack}, Bet {opp.currentBet}, Status: {status}");
+            prompt.AppendLine("[Board]");
+            prompt.AppendLine(string.Join(", ", request.communityCards.Select(c => c.displayName)));
         }
 
-        // 5. Diễn biến vòng cược hiện tại (Giúp AI nhận diện độ hung hãn của đối thủ)
-        prompt.AppendLine("--- ROUND HISTORY ---");
-        if (state.currentRoundHistory.Count > 0)
+        if (request.opponents != null && request.opponents.Count > 0)
         {
-            foreach (var record in state.currentRoundHistory)
-                prompt.AppendLine($"{record.playerName} performed {record.action} ({record.amount} chips)");
+            prompt.AppendLine("[Opponents]");
+            foreach (var opponent in request.opponents)
+            {
+                prompt.AppendLine($"{opponent.name} | stack={opponent.stack} | bet={opponent.currentBet} | folded={opponent.isFolded} | allIn={opponent.isAllIn}");
+            }
         }
-        else prompt.AppendLine("No actions yet this round.");
 
-        // 6. TRÍ NHỚ (Học từ các ván trước)
-        prompt.AppendLine("--- MEMORY (Past Rounds) ---");
-        if (memory.Count > 0)
+        if (request.currentRoundHistory != null && request.currentRoundHistory.Count > 0)
         {
-            // Chỉ gửi 3 ván gần nhất để tránh quá tải Token
-            var recentMemory = memory.Skip(Mathf.Max(0, memory.Count - 3)).ToList();
-            foreach (var h in recentMemory)
-                prompt.AppendLine($"- Round {h.roundNumber}: {h.summary}. Winner: {h.winnerName}");
+            prompt.AppendLine("[RoundHistory]");
+            foreach (var action in request.currentRoundHistory)
+            {
+                prompt.AppendLine($"{action.phase}: {action.playerName} -> {action.action} ({action.amount})");
+            }
         }
-        else prompt.AppendLine("First round. No memory yet.");
 
-        // 7. Yêu cầu đầu ra (Output format)
-        prompt.AppendLine("--- TASK ---");
-        prompt.AppendLine("Analyze the board, your hand strength, and opponents' behavior.");
-        prompt.AppendLine("Respond ONLY in JSON format with: 'action' (Fold, Check, Call, Raise), 'amount' (if raising), and 'reason' (briefly explain why).");
+        if (request.memory != null && request.memory.Count > 0)
+        {
+            prompt.AppendLine("[RecentMemory]");
+            foreach (var hand in request.memory)
+            {
+                prompt.AppendLine($"Round {hand.roundNumber} | winner={hand.winnerName} | pot={hand.finalPot} | {hand.summary}");
+            }
+        }
+
+        prompt.AppendLine("[Output]");
+        prompt.AppendLine("Return JSON only: {\"action\":\"Fold|Check|Call|Raise\",\"amount\":0,\"reason\":\"short reason\"}");
 
         return prompt.ToString();
     }
