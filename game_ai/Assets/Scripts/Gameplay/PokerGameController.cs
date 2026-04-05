@@ -19,6 +19,9 @@ public class PokerGameController : MonoBehaviour
     [SerializeField] private int smallBlind = 10;
     [SerializeField] private int bigBlind = 20;
 
+    private List<ActionRecord> currentRoundHistory = new List<ActionRecord>();
+    private List<HandHistory> matchHistory = new List<HandHistory>();
+
     private int dealerIndex = -1;
     private GamePhase currentPhase;
 
@@ -53,7 +56,14 @@ public class PokerGameController : MonoBehaviour
             if (!IsGameOverEarly())
                 yield return StartCoroutine(RiverPhase());
 
-            yield return StartCoroutine(ShowdownPhase());
+            if (!IsGameOverEarly())
+            {
+                yield return StartCoroutine(ShowdownPhase());
+            }
+            else
+            {
+                ResolveEarlyWinner();
+            }
 
             yield return new WaitForSeconds(3f);
         }
@@ -73,7 +83,7 @@ public class PokerGameController : MonoBehaviour
         else
         {
             yield return StartCoroutine(
-                ai.DecideAction(player, bettingManager.HighestBet, (a) => action = a)
+                ai.DecideAction(this,player, bettingManager.HighestBet, (a) => action = a)
             );
         }
 
@@ -104,6 +114,14 @@ public class PokerGameController : MonoBehaviour
 
     private IEnumerator ExecuteAction(PlayerHand player, PlayerAction action)
     {
+        currentRoundHistory.Add(new ActionRecord
+        {
+            phase = currentPhase,
+            playerName = player.name,
+            action = action.Type,
+            amount = (action.Type == PlayerActionType.Raise) ? action.RaiseAmount : 0
+        });
+
         switch (action.Type)
         {
             case PlayerActionType.Fold:
@@ -328,29 +346,77 @@ public class PokerGameController : MonoBehaviour
         return next;
     }
 
+    private void ResolveEarlyWinner()
+    {
+        var winner = players.FirstOrDefault(p => !p.IsFolded);
+
+        if (winner != null)
+        {
+            winner.AddMoney(potController.Pot);
+            Debug.Log($"🏆 {winner.name} thắng (mọi người fold)");
+            SaveMatchResult(winner.name, potController.Pot);
+        }
+    }
+
     private void ResolveWinner()
     {
         var activePlayers = players.Where(p => !p.IsFolded).ToList();
+        if (activePlayers.Count == 0)
+        {
+            Debug.LogError("ResolveWinner: No active players!");
+            return;
+        }
 
         var results = new Dictionary<PlayerHand, HandResult>();
-
-        // 1. Evaluate tất cả player
         foreach (var p in activePlayers)
         {
             var cards = new List<CardData>();
 
-            cards.AddRange(p.handCards.Select(c => c.data));
-            cards.AddRange(cardDealer.CommunityCards());
+            if (p.handCards != null)
+            {
+                cards.AddRange(
+                    p.handCards
+                        .Where(c => c != null && c.data != null)
+                        .Select(c => c.data)
+                );
+            }
 
-            results[p] = PokerHandEvaluator.EvaluateHand(cards);
+            var community = cardDealer.CommunityCards();
+            if (community != null)
+            {
+                cards.AddRange(community.Where(c => c != null));
+            }
+
+            if (cards.Count < 5)
+            {
+                Debug.LogError($"Player {p.name} không đủ bài để evaluate ({cards.Count})");
+                continue;
+            }
+
+            var result = PokerHandEvaluator.EvaluateHand(cards);
+
+            if (result == null)
+            {
+                Debug.LogError($"EvaluateHand trả null cho {p.name}");
+                continue;
+            }
+
+            results[p] = result;
         }
 
-        PlayerHand bestPlayer = activePlayers[0];
+        if (results.Count == 0)
+        {
+            Debug.LogError("ResolveWinner: No valid results!");
+            return;
+        }
+
+        PlayerHand bestPlayer = results.Keys.First();
         HandResult bestHand = results[bestPlayer];
 
-        foreach (var p in activePlayers)
+        foreach (var kvp in results)
         {
-            var current = results[p];
+            var p = kvp.Key;
+            var current = kvp.Value;
 
             if (PokerHandEvaluator.CompareHands(current, bestHand) > 0)
             {
@@ -359,9 +425,16 @@ public class PokerGameController : MonoBehaviour
             }
         }
 
-        var winners = activePlayers
-            .Where(p => PokerHandEvaluator.CompareHands(results[p], bestHand) == 0)
+        var winners = results
+            .Where(kvp => PokerHandEvaluator.CompareHands(kvp.Value, bestHand) == 0)
+            .Select(kvp => kvp.Key)
             .ToList();
+
+        if (winners.Count == 0)
+        {
+            Debug.LogError("No winners found!");
+            return;
+        }
 
         int share = potController.Pot / winners.Count;
 
@@ -369,6 +442,60 @@ public class PokerGameController : MonoBehaviour
         {
             w.AddMoney(share);
             Debug.Log($"🏆 {w.name} thắng với {results[w].Rank}");
+            SaveMatchResult(w.name, potController.Pot);
         }
+
+        
+    }
+
+    public GameStateSnapshot GetCurrentState(PlayerHand aiPlayer)
+    {
+        var snapshot = new GameStateSnapshot();
+        snapshot.phase = currentPhase;
+        snapshot.potSize = potController.Pot;
+        snapshot.highestBet = bettingManager.HighestBet;
+
+        snapshot.communityCards = cardDealer.CommunityCards()
+            .Select(c => c.ToDTO())
+            .ToList();
+
+        snapshot.me = CreatePlayerSnapshot(aiPlayer, true);
+        snapshot.opponents = players
+            .Where(p => p != aiPlayer)
+            .Select(p => CreatePlayerSnapshot(p, false))
+            .ToList();
+
+        snapshot.currentRoundHistory = currentRoundHistory;
+
+        return snapshot;
+    }
+
+    private PlayerSnapshot CreatePlayerSnapshot(PlayerHand p, bool includeCards)
+    {
+        return new PlayerSnapshot
+        {
+            name = p.name,
+            stack = p.Wallet,
+            currentBet = p.CurrentBet,
+            isFolded = p.IsFolded,
+            isAllIn = p.Wallet <= 0,
+            hand = includeCards ? p.handCards.Select(c => c.data.ToDTO()).ToList() : null
+        };
+    }
+
+    private void SaveMatchResult(string winnerName, int finalPot)
+    {
+        HandHistory history = new HandHistory
+        {
+            roundNumber = matchHistory.Count + 1,
+            allActions = new List<ActionRecord>(currentRoundHistory),
+            winnerName = winnerName,
+            finalPot = finalPot,
+            summary = $"Winner: {winnerName} won {finalPot} chips."
+        };
+
+        matchHistory.Add(history);
+
+        currentRoundHistory.Clear();
     }
 }

@@ -10,6 +10,9 @@ public class PlayerHand : MonoBehaviour
     [SerializeField] private int _wallet = 1000;
     [SerializeField] private Image dealerIcon;
 
+    public List<PlayerAction> currentRoundActions = new List<PlayerAction>();
+    public List<HandHistory> history = new List<HandHistory>();
+
     public List<CardModel> handCards;
     public ChipController chipController;
 

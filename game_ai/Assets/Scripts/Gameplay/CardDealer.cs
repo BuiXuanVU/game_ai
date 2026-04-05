@@ -66,20 +66,7 @@ public class CardDealer : MonoBehaviour
 
         foreach (var p in players)
         {
-            p.FlipCard();
-        }
-    }
-
-    public IEnumerator DealInitialCards(List<PlayerHand> players)
-    {
-        for (int round = 0; round < 2; round++)
-        {
-            foreach (var p in players)
-            {
-                if (p.IsFolded) continue;
-                var cardData = deckManager.Draw();
-                yield return p.ReceiveCard(cardData, round);
-            }
+            if(p.IsHuman) p.FlipCard();
         }
     }
 
