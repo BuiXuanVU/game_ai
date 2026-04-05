@@ -17,6 +17,11 @@ public class PokerAI : MonoBehaviour
 
     private readonly List<HandHistory> memory = new List<HandHistory>();
 
+    private void Awake()
+    {
+        Debug.Log($"[PokerAI] Local data path: {PokerLocalStore.RootPath}");
+    }
+
     public IEnumerator DecideActionCoroutine(BettingHandler bettingHandler, PlayerHand aiPlayer, int highestBet, GamePhase phase, List<ActionRecord> roundHistory, Action<PlayerAction> callback)
     {
         PokerGameController controller = bettingHandler.GetComponent<PokerGameController>();
@@ -40,6 +45,7 @@ public class PokerAI : MonoBehaviour
         if (webRequest.result != UnityWebRequest.Result.Success)
         {
             Debug.LogWarning($"[PokerAI] Agent request failed: {webRequest.error}. Using fallback action.");
+            RecordDecisionAudit(request, null, fallbackAction, true, webRequest.error);
             callback?.Invoke(fallbackAction);
             yield break;
         }
@@ -48,6 +54,7 @@ public class PokerAI : MonoBehaviour
         if (response == null)
         {
             Debug.LogWarning("[PokerAI] Agent returned invalid JSON. Using fallback action.");
+            RecordDecisionAudit(request, null, fallbackAction, true, "Invalid JSON response from local agent.");
             callback?.Invoke(fallbackAction);
             yield break;
         }
@@ -55,14 +62,29 @@ public class PokerAI : MonoBehaviour
         if (logAgentResponse)
             Debug.Log($"<color=cyan>[AI Agent Response]</color> {webRequest.downloadHandler.text}");
 
-        callback?.Invoke(ConvertToPlayerAction(request, response));
+        PlayerAction finalAction = ConvertToPlayerAction(request, response);
+        bool usedFallback = IsFallbackDecision(request, response, finalAction);
+        RecordDecisionAudit(request, response, finalAction, usedFallback, null);
+        callback?.Invoke(finalAction);
     }
 
     public void LearnFromRound(HandHistory history)
     {
         memory.Add(history);
-        if (memory.Count > 10)
+        if (memory.Count > memoryWindow)
             memory.RemoveAt(0);
+    }
+
+    public void LoadMemory(IEnumerable<HandHistory> history)
+    {
+        memory.Clear();
+        if (history == null)
+            return;
+
+        foreach (HandHistory hand in history.Skip(Mathf.Max(0, history.Count() - memoryWindow)))
+        {
+            memory.Add(hand);
+        }
     }
 
     private LlmDecisionRequest BuildRequest(GameStateSnapshot snapshot, PlayerHand aiPlayer)
@@ -170,5 +192,40 @@ public class PokerAI : MonoBehaviour
             return new PlayerAction(PlayerActionType.Call);
 
         return new PlayerAction(PlayerActionType.Fold);
+    }
+
+    private bool IsFallbackDecision(LlmDecisionRequest request, LlmDecisionResponse response, PlayerAction finalAction)
+    {
+        if (response == null || string.IsNullOrWhiteSpace(response.action))
+            return true;
+
+        string requestedAction = response.action.Trim().ToLowerInvariant();
+        string finalActionName = finalAction.Type.ToString().ToLowerInvariant();
+        if (requestedAction != finalActionName)
+            return true;
+
+        if (finalAction.Type == PlayerActionType.Raise)
+            return response.amount != finalAction.RaiseAmount;
+
+        return false;
+    }
+
+    private void RecordDecisionAudit(LlmDecisionRequest request, LlmDecisionResponse response, PlayerAction finalAction, bool usedFallback, string error)
+    {
+        PokerLocalStore.AppendDecisionAudit(new DecisionAuditEntry
+        {
+            timestampUtc = DateTime.UtcNow.ToString("o"),
+            playerName = request.me?.name,
+            phase = request.phase,
+            potSize = request.potSize,
+            callAmount = request.callAmount,
+            usedFallback = usedFallback,
+            chosenAction = finalAction.Type.ToString(),
+            chosenAmount = finalAction.Type == PlayerActionType.Raise ? finalAction.RaiseAmount : 0,
+            reason = response?.reason ?? string.Empty,
+            error = error ?? string.Empty,
+            rawResponse = response?.rawResponse ?? string.Empty,
+            promptPreview = request.promptPreview ?? string.Empty
+        });
     }
 }

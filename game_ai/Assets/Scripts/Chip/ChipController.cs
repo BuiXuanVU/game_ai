@@ -73,7 +73,6 @@ public class ChipController : MonoBehaviour
     // =========================
     private void CreateChip(float x, float y, int chipValue)
     {
-        Debug.Log(x + " " + y);
         Image chip = GetChipFromPool();
         chip.rectTransform.anchoredPosition = new Vector2(x, y);
         chip.rectTransform.localScale = Vector3.one;

@@ -36,6 +36,9 @@ public class PokerGameController : MonoBehaviour
 
     private void Start()
     {
+        matchHistory = PokerLocalStore.LoadHandHistory();
+        ai?.LoadMemory(matchHistory);
+        Debug.Log($"[PokerGameController] Loaded {matchHistory.Count} hands from {PokerLocalStore.HandHistoryPath}");
         StartCoroutine(GameLoop());
     }
 
@@ -196,6 +199,7 @@ public class PokerGameController : MonoBehaviour
                 : $"Split pot: {winnerNames} shared {finalPot} chips."
         };
         matchHistory.Add(handHistory);
+        PokerLocalStore.SaveHandHistory(matchHistory);
         ai?.LearnFromRound(handHistory);
         currentRoundHistory.Clear();
     }

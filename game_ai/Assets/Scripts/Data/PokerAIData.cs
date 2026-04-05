@@ -125,3 +125,32 @@ public class LlmDecisionResponse
     public string reason;
     public string rawResponse;
 }
+
+[System.Serializable]
+public class HandHistoryCollection
+{
+    public List<HandHistory> items = new List<HandHistory>();
+}
+
+[System.Serializable]
+public class DecisionAuditEntry
+{
+    public string timestampUtc;
+    public string playerName;
+    public string phase;
+    public int potSize;
+    public int callAmount;
+    public bool usedFallback;
+    public string chosenAction;
+    public int chosenAmount;
+    public string reason;
+    public string error;
+    public string rawResponse;
+    public string promptPreview;
+}
+
+[System.Serializable]
+public class DecisionAuditCollection
+{
+    public List<DecisionAuditEntry> items = new List<DecisionAuditEntry>();
+}
