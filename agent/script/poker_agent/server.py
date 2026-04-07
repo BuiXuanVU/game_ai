@@ -13,7 +13,7 @@ logger = logging.getLogger("poker_agent")
 
 try:
     decision_service = DecisionService(GeminiDecisionClient())
-except Exception as exc:  # pragma: no cover - startup path
+except Exception as exc:
     decision_service = None
     startup_error = str(exc)
     logger.exception("Poker agent startup failed")
