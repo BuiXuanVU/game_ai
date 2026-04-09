@@ -1,0 +1,41 @@
+{
+  "run_id": "20260408T102956Z",
+  "created_utc": "2026-04-08T10:29:56.389328+00:00",
+  "config": {
+    "starting_stack": 1000,
+    "small_blind": 10,
+    "big_blind": 20,
+    "hands_per_match": 40,
+    "matches_per_pairing": 5,
+    "seed": 7,
+    "table_sizes": [
+      2
+    ]
+  },
+  "bots": [
+    {
+      "name": "baseline",
+      "policy": "baseline",
+      "history_window": 0,
+      "use_opponent_stats": false,
+      "style_notes": "Rule-based baseline with no learning.",
+      "model_name": null
+    },
+    {
+      "name": "weak_ai",
+      "policy": "llm",
+      "history_window": 3,
+      "use_opponent_stats": false,
+      "style_notes": "Short memory poker bot. Focus on current street and avoid risky bluffs.",
+      "model_name": "gemini-2.5-flash"
+    },
+    {
+      "name": "main_ai",
+      "policy": "llm",
+      "history_window": 20,
+      "use_opponent_stats": true,
+      "style_notes": "Longer-memory poker bot. Use recent trends to exploit folds and weak calls.",
+      "model_name": "gemini-2.5-flash"
+    }
+  ]
+}

@@ -32,6 +32,24 @@ class HandMemory(BaseModel):
     summary: str
 
 
+class OpponentStats(BaseModel):
+    name: str
+    handsObserved: int = 0
+    foldRate: float = 0.0
+    callRate: float = 0.0
+    raiseRate: float = 0.0
+    showdownWinRate: float = 0.0
+    aggressionScore: float = 0.0
+
+
+class BotProfile(BaseModel):
+    name: str
+    styleNotes: str = ""
+    historyWindow: int = 0
+    useOpponentStats: bool = False
+    modelName: Optional[str] = None
+
+
 class DecisionRequest(BaseModel):
     phase: str
     potSize: int
@@ -49,6 +67,8 @@ class DecisionRequest(BaseModel):
     communityCards: List[CardData] = Field(default_factory=list)
     currentRoundHistory: List[ActionRecord] = Field(default_factory=list)
     memory: List[HandMemory] = Field(default_factory=list)
+    opponentStats: List[OpponentStats] = Field(default_factory=list)
+    botProfile: Optional[BotProfile] = None
 
 
 class DecisionResponse(BaseModel):
@@ -56,3 +76,4 @@ class DecisionResponse(BaseModel):
     amount: int = 0
     reason: str = ""
     rawResponse: Optional[str] = None
+    usedFallback: bool = False

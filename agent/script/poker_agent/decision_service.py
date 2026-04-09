@@ -15,6 +15,7 @@ class DecisionService:
     def _normalize(self, request: DecisionRequest, decision: DecisionResponse) -> DecisionResponse:
         action = (decision.action or "").strip().capitalize()
         amount = max(0, decision.amount)
+        decision.usedFallback = False
 
         if action not in {"Fold", "Check", "Call", "Raise"}:
             return self._fallback(request, "Model returned an unknown action, fallback used.")
@@ -41,7 +42,7 @@ class DecisionService:
 
     def _fallback(self, request: DecisionRequest, reason: str) -> DecisionResponse:
         if request.canCheck:
-            return DecisionResponse(action="Check", amount=0, reason=reason)
+            return DecisionResponse(action="Check", amount=0, reason=reason, usedFallback=True)
         if request.canCall:
-            return DecisionResponse(action="Call", amount=0, reason=reason)
-        return DecisionResponse(action="Fold", amount=0, reason=reason)
+            return DecisionResponse(action="Call", amount=0, reason=reason, usedFallback=True)
+        return DecisionResponse(action="Fold", amount=0, reason=reason, usedFallback=True)

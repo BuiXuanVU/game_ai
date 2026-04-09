@@ -5,11 +5,11 @@ from fastapi import FastAPI, HTTPException
 
 from poker_agent.decision_service import DecisionService
 #from poker_agent.gemini_client import GeminiDecisionClient
-from poker_agent.lm_client import LmDecisionClient
+from poker_agent.llm_runtime import LmDecisionClient
 from poker_agent.models import DecisionRequest, DecisionResponse
 
 
-app = FastAPI(title="Poker Gemini Agent")
+app = FastAPI(title="Poker Local Agent")
 logger = logging.getLogger("poker_agent")
 
 try:
@@ -25,7 +25,7 @@ else:
 @app.get("/")
 def root() -> dict:
     return {
-        "service": "Poker Gemini Agent",
+        "service": "Poker Local Agent",
         "health": "/health",
         "decide": "/v1/decide",
     }

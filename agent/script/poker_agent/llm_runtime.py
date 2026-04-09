@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any
+from typing import Optional
 
 from openai import OpenAI
 
@@ -10,16 +10,20 @@ from poker_agent.prompt_builder import SYSTEM_PROMPT, build_user_prompt
 
 
 class LmDecisionClient:
-    def __init__(self) -> None:
-        # LM Studio không cần API key
+    def __init__(self, model_name: Optional[str] = None, base_url: Optional[str] = None) -> None:
         self.client = OpenAI(
-            base_url="http://127.0.0.1:1234/v1",
-            api_key="not-needed"
+            base_url=base_url or settings.lm_studio_base_url,
+            api_key=settings.api_key,
         )
+        self.model_name = model_name or settings.model_name
 
     def decide(self, request: DecisionRequest) -> DecisionResponse:
+        model_name = self.model_name
+        if request.botProfile and request.botProfile.modelName:
+            model_name = request.botProfile.modelName
+
         response = self.client.chat.completions.create(
-            model="google/gemma-3-4b",
+            model=model_name,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": build_user_prompt(request)},
@@ -29,7 +33,6 @@ class LmDecisionClient:
         )
 
         raw_text = response.choices[0].message.content
-
         payload = self._load_json(raw_text)
         decision = DecisionResponse.model_validate(payload)
         decision.rawResponse = raw_text

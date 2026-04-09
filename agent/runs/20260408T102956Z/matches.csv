@@ -1,0 +1,16 @@
+run_id,match_id,table_size,players,seed,total_hands,starting_stack,small_blind,big_blind,final_stacks,winner
+20260408T102956Z,match_001_baseline_vs_weak_ai,2,baseline|weak_ai,1007,40,1000,10,20,"{""baseline"": 1014, ""weak_ai"": -1014}",baseline
+20260408T102956Z,match_002_baseline_vs_weak_ai,2,baseline|weak_ai,2008,40,1000,10,20,"{""baseline"": -2490, ""weak_ai"": 2490}",weak_ai
+20260408T102956Z,match_003_baseline_vs_weak_ai,2,baseline|weak_ai,3009,40,1000,10,20,"{""baseline"": 1032, ""weak_ai"": -1032}",baseline
+20260408T102956Z,match_004_baseline_vs_weak_ai,2,baseline|weak_ai,4010,40,1000,10,20,"{""baseline"": 4348, ""weak_ai"": -4348}",baseline
+20260408T102956Z,match_005_baseline_vs_weak_ai,2,baseline|weak_ai,5011,40,1000,10,20,"{""baseline"": 1781, ""weak_ai"": -1781}",baseline
+20260408T102956Z,match_006_baseline_vs_main_ai,2,baseline|main_ai,6007,40,1000,10,20,"{""baseline"": -1845, ""main_ai"": 1845}",main_ai
+20260408T102956Z,match_007_baseline_vs_main_ai,2,baseline|main_ai,7008,40,1000,10,20,"{""baseline"": -4863, ""main_ai"": 4863}",main_ai
+20260408T102956Z,match_008_baseline_vs_main_ai,2,baseline|main_ai,8009,40,1000,10,20,"{""baseline"": 4968, ""main_ai"": -4968}",baseline
+20260408T102956Z,match_009_baseline_vs_main_ai,2,baseline|main_ai,9010,40,1000,10,20,"{""baseline"": -4276, ""main_ai"": 4276}",main_ai
+20260408T102956Z,match_010_baseline_vs_main_ai,2,baseline|main_ai,10011,40,1000,10,20,"{""baseline"": 652, ""main_ai"": -652}",baseline
+20260408T102956Z,match_011_weak_ai_vs_main_ai,2,weak_ai|main_ai,11007,40,1000,10,20,"{""main_ai"": 985, ""weak_ai"": -985}",main_ai
+20260408T102956Z,match_012_weak_ai_vs_main_ai,2,weak_ai|main_ai,12008,40,1000,10,20,"{""main_ai"": -30, ""weak_ai"": 30}",weak_ai
+20260408T102956Z,match_013_weak_ai_vs_main_ai,2,weak_ai|main_ai,13009,40,1000,10,20,"{""main_ai"": -3050, ""weak_ai"": 3050}",weak_ai
+20260408T102956Z,match_014_weak_ai_vs_main_ai,2,weak_ai|main_ai,14010,40,1000,10,20,"{""main_ai"": -970, ""weak_ai"": 970}",weak_ai
+20260408T102956Z,match_015_weak_ai_vs_main_ai,2,weak_ai|main_ai,15011,40,1000,10,20,"{""main_ai"": -5960, ""weak_ai"": 5960}",weak_ai

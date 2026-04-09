@@ -6,6 +6,7 @@ You must choose exactly one legal action for the current player.
 Use only the legal actions and raise range provided by the input.
 Be conservative when the situation is ambiguous.
 If action is not Raise, amount must be 0.
+Respond with JSON only using keys: action, amount, reason.
 """
 
 
@@ -23,24 +24,52 @@ def build_user_prompt(request: DecisionRequest) -> str:
         f"Can call: {request.canCall}",
         f"Can raise: {request.canRaise}",
         f"Raise amount range: {request.minRaiseAmount} to {request.maxRaiseAmount}",
-        "",
-        "[ME]",
-        f"Name: {request.me.name}",
-        f"Stack: {request.me.stack}",
-        f"Current bet: {request.me.currentBet}",
-        f"Cards: {my_cards}",
-        "",
-        "[BOARD]",
-        board,
-        "",
-        "[OPPONENTS]",
     ]
+
+    if request.botProfile:
+        parts.extend(
+            [
+                "",
+                "[BOT PROFILE]",
+                f"Name: {request.botProfile.name}",
+                f"Style notes: {request.botProfile.styleNotes or 'None'}",
+                f"History window: {request.botProfile.historyWindow}",
+                f"Use opponent stats: {request.botProfile.useOpponentStats}",
+            ]
+        )
+
+    parts.extend(
+        [
+            "",
+            "[ME]",
+            f"Name: {request.me.name}",
+            f"Stack: {request.me.stack}",
+            f"Current bet: {request.me.currentBet}",
+            f"Cards: {my_cards}",
+            "",
+            "[BOARD]",
+            board,
+            "",
+            "[OPPONENTS]",
+        ]
+    )
 
     if request.opponents:
         for opponent in request.opponents:
             parts.append(
                 f"{opponent.name} | stack={opponent.stack} | bet={opponent.currentBet} | "
                 f"folded={opponent.isFolded} | all_in={opponent.isAllIn}"
+            )
+    else:
+        parts.append("None")
+
+    parts.extend(["", "[OPPONENT STATS]"])
+    if request.opponentStats:
+        for stats in request.opponentStats:
+            parts.append(
+                f"{stats.name} | hands={stats.handsObserved} | fold={stats.foldRate:.2f} | "
+                f"call={stats.callRate:.2f} | raise={stats.raiseRate:.2f} | "
+                f"showdown_win={stats.showdownWinRate:.2f} | aggression={stats.aggressionScore:.2f}"
             )
     else:
         parts.append("None")
