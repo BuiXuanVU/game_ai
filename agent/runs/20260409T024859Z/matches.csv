@@ -1,0 +1,7 @@
+run_id,match_id,table_size,players,seed,total_hands,starting_stack,small_blind,big_blind,final_stacks,winner
+20260409T024859Z,match_001_baseline_vs_weak_ai,2,baseline|weak_ai,1007,10,1000,10,20,"{""baseline"": -697, ""weak_ai"": 697}",weak_ai
+20260409T024859Z,match_002_baseline_vs_weak_ai,2,baseline|weak_ai,2008,10,1000,10,20,"{""baseline"": -675, ""weak_ai"": 675}",weak_ai
+20260409T024859Z,match_003_baseline_vs_main_ai,2,baseline|main_ai,3007,10,1000,10,20,"{""baseline"": -47, ""main_ai"": 47}",main_ai
+20260409T024859Z,match_004_baseline_vs_main_ai,2,baseline|main_ai,4008,10,1000,10,20,"{""baseline"": 1661, ""main_ai"": -1661}",baseline
+20260409T024859Z,match_005_weak_ai_vs_main_ai,2,weak_ai|main_ai,5007,10,1000,10,20,"{""main_ai"": 0, ""weak_ai"": 0}",Draw
+20260409T024859Z,match_006_weak_ai_vs_main_ai,2,weak_ai|main_ai,6008,10,1000,10,20,"{""main_ai"": -2990, ""weak_ai"": 2990}",weak_ai
